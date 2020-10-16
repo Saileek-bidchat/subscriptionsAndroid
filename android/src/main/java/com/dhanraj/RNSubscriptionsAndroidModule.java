@@ -4,7 +4,9 @@ package com.dhanraj;
 import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingClientStateListener;
 import com.android.billingclient.api.BillingFlowParams;
+import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.PurchaseHistoryRecord;
 import com.android.billingclient.api.PurchaseHistoryResponseListener;
 import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.android.billingclient.api.SkuDetails;
@@ -14,10 +16,8 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.Callback;
-import com.facebook.react.uimanager.annotations.ReactProp;
 
-import android.content.Context;
-import android.support.annotation.Nullable;
+import android.app.Activity;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -52,10 +52,15 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
     subscriptionProducts = new ArrayList<>(Arrays.asList(ProductData.split(",")));
     billingClient = BillingClient.newBuilder(this.reactContext).setListener(this).build();
     billingClient.startConnection(new BillingClientStateListener() {
+//      @Override
+//      public void onBillingSetupFinished(int responseCode) {
+//
+//      }
+
       @Override
-      public void onBillingSetupFinished(int responseCode) {
-        Log.e(TAG, "onBillingSetupFinished: "+responseCode );
-        if(responseCode == BillingClient.BillingResponse.OK) {
+      public void onBillingSetupFinished(BillingResult billingResult) {
+        Log.e(TAG, "onBillingSetupFinished: "+billingResult );
+        if(billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
           // The BillingClient is ready. You can query purchases here.
           cb.invoke(null, "OK");
           Log.e(TAG, "onBillingSetupFinished: "+"BillingClient is ready. You can query purchases here" );
@@ -66,7 +71,7 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
 
           try {
             Log.e(TAG, "onBillingSetupFinished: 111" );
-            cb.invoke(getErrorJson(responseCode), null);
+            cb.invoke(getErrorJson(billingResult), null);
           }catch (Exception e) {
             Log.e(TAG, "onBillingSetupFinished: 112" );
             e.printStackTrace();
@@ -103,8 +108,8 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
       params.setType(BillingClient.SkuType.SUBS);
       billingClient.querySkuDetailsAsync(params.build(), new SkuDetailsResponseListener() {
         @Override
-        public void onSkuDetailsResponse(int responseCode, List<SkuDetails> skuDetailsList) {
-          Log.e(TAG, "onSkuDetailsResponse: "+responseCode+ "skuDetailsList: "+ skuDetailsList );
+        public void onSkuDetailsResponse(BillingResult billingResult, List<SkuDetails> skuDetailsList) {
+          Log.e(TAG, "onSkuDetailsResponse: "+billingResult+ "skuDetailsList: "+ skuDetailsList );
 
           // Retrieve a value for "skuDetails" by calling querySkuDetailsAsync().
           if((skuDetailsList != null) && (skuDetailsList.size() > 0)) {
@@ -125,9 +130,14 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
 //            }
             pCallback.invoke(skuDetails.toString());
           }
-
-
         }
+
+//        @Override
+//        public void onSkuDetailsResponse(int responseCode, List<SkuDetails> skuDetailsList) {
+//
+//
+//
+//        }
       });
     } else {
       if(pCallback != null) {
@@ -183,22 +193,27 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
       params.setType(BillingClient.SkuType.SUBS);
       billingClient.querySkuDetailsAsync(params.build(), new SkuDetailsResponseListener() {
         @Override
-        public void onSkuDetailsResponse(int responseCode, List<SkuDetails> skuDetailsList) {
-          Log.e(TAG, "onSkuDetailsResponse: "+responseCode+ "skuDetailsList: "+ skuDetailsList );
+        public void onSkuDetailsResponse(BillingResult billingResult, List<SkuDetails> skuDetailsList) {
+          Log.e(TAG, "onSkuDetailsResponse: "+billingResult+ "skuDetailsList: "+ skuDetailsList );
           // Retrieve a value for "skuDetails" by calling querySkuDetailsAsync().
           if((skuDetailsList != null) && (skuDetailsList.size() > 0)) {
             skuDetails = new ArrayList<>();
             skuDetails.addAll(skuDetailsList);
 
             Log.e(TAG, "loadProducts: productsCallback"+ "skuDetails: "+ skuDetails );
-            purchaseNow(cb, oldProduct, productId, prorationMode, responseCode);
+            purchaseNow(cb, oldProduct, productId, prorationMode, billingResult);
           } else {
             billingClient.endConnection();
             //todo: if no products handle
             Log.e(TAG, "subscribeTo No Products available " );
-            purchaseCB.invoke(getErrorJson(responseCode), null);
+            purchaseCB.invoke(getErrorJson(billingResult), null);
           }
         }
+
+//        @Override
+//        public void onSkuDetailsResponse(int responseCode, List<SkuDetails> skuDetailsList) {
+//
+//        }
       });
     } else {
       Toast.makeText(reactContext, "Billing client not ready yet", Toast.LENGTH_SHORT);
@@ -207,7 +222,7 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
   }
 
 
-  public void purchaseNow(Callback cb, String oldProduct, String productId, int prorationMode, int responseCode) {
+  public void purchaseNow(Callback cb, String oldProduct, String productId, int prorationMode, BillingResult responseCode) {
 
     purchaseCB = cb;
     boolean isProductExist = false;
@@ -256,83 +271,47 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
       flowParams.setReplaceSkusProrationMode((prorationMode == 0) ? BillingFlowParams.ProrationMode.IMMEDIATE_WITH_TIME_PRORATION :prorationMode);
     }
 
-    int responseCode2 = billingClient.launchBillingFlow(getReactApplicationContext().getCurrentActivity(), flowParams.build());
+    BillingResult responseCode2 = billingClient.launchBillingFlow(getCurrentActivity(), flowParams.build());
     Log.e(TAG, "purchaseDigitalProduct:(0 = OK | 1 = USER CANCELED | 2-8 =ANY OTHER) "+responseCode2 );
 
   }
 
-  @Override
-  public void onPurchasesUpdated(int responseCode, @Nullable List<Purchase> purchases) {
-    Log.e(TAG, "onPurchasesUpdated: "+ responseCode+ " purchases: "+ purchases );
-
-    if (responseCode == BillingClient.BillingResponse.OK
-            && purchases != null) {
-      for (Purchase purchase : purchases) {
-        handlePurchase(purchase);
-//        purchaseCB.invoke(null, purchase.toString());
-
-      }
-    } else if(responseCode == BillingClient.BillingResponse.OK) {
-      //history
-      billingClient.queryPurchaseHistoryAsync(BillingClient.SkuType.SUBS, new PurchaseHistoryResponseListener() {
-        @Override
-        public void onPurchaseHistoryResponse(int responseCode, List<Purchase> purchasesList) {
-          Log.e(TAG, "onPurchaseHistoryResponse: "+ responseCode+ " purchasesList: "+ purchasesList );
-          if(purchasesList != null) {
-            Purchase purchase = purchasesList.get(0);
-            Log.e(TAG, "onPurchaseHistoryResponse: "+ " purchasesListUpdated: "+ purchase );
-            billingClient.endConnection();
-            purchaseCB.invoke(null, purchase.getPurchaseToken());
-          } else {
-            billingClient.endConnection();
-            purchaseCB.invoke(getErrorJson(responseCode), null);
-          }
-        }
-      });
-    } else {
-      billingClient.endConnection();
-      Log.e(TAG, "onPurchasesUpdated errorthrown: re" );
-      //Error cases
-      try {
-        purchaseCB.invoke(getErrorJson(responseCode), null);
-      } catch (Exception e) {
-        Log.e(TAG, "onPurchasesUpdated errorthrown: "+ e.getMessage() );
-        e.printStackTrace();
-      }
-    }
-  }
+//  @Override
+//  public void onPurchasesUpdated(int responseCode, @Nullable List<Purchase> purchases) {
+//
+//  }
 
   public String getBillingResponse(int responseCode) {
     String errorMsg = "";
     switch (responseCode) {
-      case BillingClient.BillingResponse.USER_CANCELED://1
+      case BillingClient.BillingResponseCode.USER_CANCELED://1
         errorMsg = "User pressed back or canceled a dialog";
         break;
-      case BillingClient.BillingResponse.SERVICE_UNAVAILABLE://2
+      case BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE://2
         errorMsg = "Network connection is down";
         break;
-      case BillingClient.BillingResponse.BILLING_UNAVAILABLE://3
+      case BillingClient.BillingResponseCode.BILLING_UNAVAILABLE://3
         errorMsg = "Billing API version is not supported for the type requested ";
         break;
-      case BillingClient.BillingResponse.ITEM_UNAVAILABLE://4
+      case BillingClient.BillingResponseCode.ITEM_UNAVAILABLE://4
         errorMsg = "Requested product is not available for purchase";
         break;
-      case BillingClient.BillingResponse.DEVELOPER_ERROR: //5
+      case BillingClient.BillingResponseCode.DEVELOPER_ERROR: //5
         errorMsg = "Invalid arguments provided to the API";
         break;
-      case BillingClient.BillingResponse.ERROR: //6
+      case BillingClient.BillingResponseCode.ERROR: //6
         errorMsg = "Fatal error during the API action";
         break;
-      case BillingClient.BillingResponse.ITEM_ALREADY_OWNED: //7
+      case BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED: //7
         errorMsg = "Failure to purchase since item is already owned";
         break;
-      case BillingClient.BillingResponse.SERVICE_DISCONNECTED: //8
+      case BillingClient.BillingResponseCode.SERVICE_DISCONNECTED: //8
         errorMsg = "Failure to consume since item is not owned ";
         break;
-      case BillingClient.BillingResponse.SERVICE_TIMEOUT: //-1
+      case BillingClient.BillingResponseCode.SERVICE_TIMEOUT: //-1
         errorMsg = "The request has reached the maximum timeout before Google Play responds";
         break;
-      case BillingClient.BillingResponse.FEATURE_NOT_SUPPORTED: //-2
+      case BillingClient.BillingResponseCode.FEATURE_NOT_SUPPORTED: //-2
         errorMsg = "Requested feature is not supported by Play Store on the current device.";
         break;
       default://BillingClient.BillingResponse.OK
@@ -343,12 +322,12 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
     return errorMsg;
   }
 
-  public String getErrorJson(int responseCode) {
+  public String getErrorJson(BillingResult responseCode) {
     //Error callback here
     JSONObject errorPurchase = new JSONObject();
     try {
       errorPurchase.put("errorCode", responseCode);
-      errorPurchase.put("errorMessage", getBillingResponse(responseCode));
+      errorPurchase.put("errorMessage", getBillingResponse(responseCode.getResponseCode()));
     } catch (JSONException e) {
       e.printStackTrace();
     }
@@ -363,9 +342,13 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
   }
 
 
+//  @Override
+//  public void onBillingSetupFinished(int responseCode) {
+//  }
+
   @Override
-  public void onBillingSetupFinished(int responseCode) {
-    Log.e(TAG, "onBillingSetupFinished new: "+responseCode );
+  public void onBillingSetupFinished(BillingResult billingResult) {
+    Log.e(TAG, "onBillingSetupFinished new: "+billingResult );
   }
 
   @Override
@@ -374,9 +357,60 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
 //    purchaseCB.invoke(getErrorJson(3), null);
   }
 
+//  @Override
+//  public void onSkuDetailsResponse(int responseCode, List<SkuDetails> skuDetailsList) {
+//    Log.e(TAG, "onSkuDetailsResponse: "+ responseCode+ "skuDetailsList: "+ skuDetailsList );
+//  }
+
   @Override
-  public void onSkuDetailsResponse(int responseCode, List<SkuDetails> skuDetailsList) {
-    Log.e(TAG, "onSkuDetailsResponse: "+ responseCode+ "skuDetailsList: "+ skuDetailsList );
+  public void onPurchasesUpdated(BillingResult billingResult, List<Purchase> purchases
+  ) {
+    Log.e(TAG, "onPurchasesUpdated: "+ billingResult+ " purchases: "+ purchases );
+
+    if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK
+            && purchases != null) {
+      for (Purchase purchase : purchases) {
+        handlePurchase(purchase);
+//        purchaseCB.invoke(null, purchase.toString());
+
+      }
+    } else if(billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+      //history
+      billingClient.queryPurchaseHistoryAsync(BillingClient.SkuType.SUBS, new PurchaseHistoryResponseListener() {
+        @Override
+        public void onPurchaseHistoryResponse(BillingResult billingResult, List<PurchaseHistoryRecord> purchasesList) {
+          Log.e(TAG, "onPurchaseHistoryResponse: "+ billingResult+ " purchasesList: "+ purchasesList );
+          if(purchasesList != null) {
+            PurchaseHistoryRecord purchase = purchasesList.get(0);
+            Log.e(TAG, "onPurchaseHistoryResponse: "+ " purchasesListUpdated: "+ purchase );
+            billingClient.endConnection();
+            purchaseCB.invoke(null, purchase.getPurchaseToken());
+          } else {
+            billingClient.endConnection();
+            purchaseCB.invoke(getErrorJson(billingResult), null);
+          }
+        }
+
+//        @Override
+//        public void onPurchaseHistoryResponse(int billingResult, List<Purchase> purchasesList) {
+//
+//        }
+      });
+    } else {
+      billingClient.endConnection();
+      Log.e(TAG, "onPurchasesUpdated errorthrown: re" );
+      //Error cases
+      try {
+        purchaseCB.invoke(getErrorJson(billingResult), null);
+      } catch (Exception e) {
+        Log.e(TAG, "onPurchasesUpdated errorthrown: "+ e.getMessage() );
+        e.printStackTrace();
+      }
+    }
   }
 
+  @Override
+  public void onSkuDetailsResponse(BillingResult billingResult, List<SkuDetails> skuDetailsList) {
+    Log.e(TAG, "onSkuDetailsResponse: "+ billingResult+ "skuDetailsList: "+ skuDetailsList );
+  }
 }
