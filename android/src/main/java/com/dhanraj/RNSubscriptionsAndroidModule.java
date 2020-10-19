@@ -50,7 +50,7 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
     String ProductData  = products.replace("[", "").replace("]", "")
             .replace("\"", "");
     subscriptionProducts = new ArrayList<>(Arrays.asList(ProductData.split(",")));
-    billingClient = BillingClient.newBuilder(this.reactContext).setListener(this).build();
+    billingClient = BillingClient.newBuilder(this.reactContext).setListener(this).enablePendingPurchases().build();
     billingClient.startConnection(new BillingClientStateListener() {
 //      @Override
 //      public void onBillingSetupFinished(int responseCode) {
@@ -194,7 +194,7 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
       billingClient.querySkuDetailsAsync(params.build(), new SkuDetailsResponseListener() {
         @Override
         public void onSkuDetailsResponse(BillingResult billingResult, List<SkuDetails> skuDetailsList) {
-          Log.e(TAG, "onSkuDetailsResponse: "+billingResult+ "skuDetailsList: "+ skuDetailsList );
+          Log.e(TAG, "onSkuDetailsResponse: "+billingResult+ "skuDfetailsList: "+ skuDetailsList );
           // Retrieve a value for "skuDetails" by calling querySkuDetailsAsync().
           if((skuDetailsList != null) && (skuDetailsList.size() > 0)) {
             skuDetails = new ArrayList<>();
@@ -267,11 +267,11 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
     flowParams.setSkuDetails(productToBuy);
     if(oldProduct != null) { // && !oldProduct.equals(productToBuy.getSku())
       Log.e(TAG, "purchaseDigitalProduct: "+ "applying proration" );
-      flowParams.setOldSku(oldProduct);
+      flowParams.setOldSku(oldProduct, productToBuy.getSku());
       flowParams.setReplaceSkusProrationMode((prorationMode == 0) ? BillingFlowParams.ProrationMode.IMMEDIATE_WITH_TIME_PRORATION :prorationMode);
     }
 
-    BillingResult responseCode2 = billingClient.launchBillingFlow(getCurrentActivity(), flowParams.build());
+    BillingResult responseCode2 = billingClient.launchBillingFlow(getCurrentActivity().getParent(), flowParams.build());
     Log.e(TAG, "purchaseDigitalProduct:(0 = OK | 1 = USER CANCELED | 2-8 =ANY OTHER) "+responseCode2 );
 
   }
