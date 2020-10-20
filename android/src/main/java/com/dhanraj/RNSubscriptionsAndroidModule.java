@@ -271,7 +271,7 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
       flowParams.setReplaceSkusProrationMode((prorationMode == 0) ? BillingFlowParams.ProrationMode.IMMEDIATE_WITH_TIME_PRORATION :prorationMode);
     }
 
-    BillingResult responseCode2 = billingClient.launchBillingFlow(getCurrentActivity().getParent(), flowParams.build());
+    BillingResult responseCode2 = billingClient.launchBillingFlow(getReactApplicationContext().getCurrentActivity(), flowParams.build());
     Log.e(TAG, "purchaseDigitalProduct:(0 = OK | 1 = USER CANCELED | 2-8 =ANY OTHER) "+responseCode2 );
 
   }
