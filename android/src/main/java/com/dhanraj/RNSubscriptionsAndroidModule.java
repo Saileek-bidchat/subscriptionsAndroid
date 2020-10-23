@@ -59,7 +59,7 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
 
       @Override
       public void onBillingSetupFinished(BillingResult billingResult) {
-        Log.e(TAG, "onBillingSetupFinished: "+billingResult );
+        Log.e(TAG, "onBillingSetupFinished: "+billingResult.getResponseCode() );
         if(billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
           // The BillingClient is ready. You can query purchases here.
           cb.invoke(null, "OK");
@@ -153,7 +153,7 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
   }
 
   @ReactMethod
-  public void subscribeTo(String oldProduct,String productId, int prorationMode, Callback cb) {
+  public void subscribeTo(String oldProduct,String transactionReceipt, String productId, int prorationMode, Callback cb) {
 
     purchaseCB = cb;
     boolean isProductExist = false;
@@ -175,7 +175,7 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
     if(isProductExist) {
 //      purchaseCB.invoke(null, "Product Exists");
       Log.e(TAG, "subscribeTo PRODUCT EXISTS " );
-      purchaseDigitalProduct(oldProduct,product, prorationMode);
+      purchaseDigitalProduct(oldProduct,product, prorationMode, transactionReceipt);
     } else {
       Log.e(TAG, "subscribeTo PRODUCT NOT EXISTS " );
       purchaseCB.invoke("Product not Exist", null);
@@ -184,7 +184,7 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
   }
 
   @ReactMethod
-  public void subscribeToPlan(final String oldProduct, final String productId, final int prorationMode, final Callback cb) {
+  public void subscribeToPlan(final String oldProduct, final String transactionReceipt, final String productId, final int prorationMode, final Callback cb) {
 
     purchaseCB = cb;
     if(billingClient.isReady()) {
@@ -201,7 +201,7 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
             skuDetails.addAll(skuDetailsList);
 
             Log.e(TAG, "loadProducts: productsCallback"+ "skuDetails: "+ skuDetails );
-            purchaseNow(cb, oldProduct, productId, prorationMode, billingResult);
+            purchaseNow(cb, oldProduct, productId, prorationMode, billingResult, transactionReceipt);
           } else {
             billingClient.endConnection();
             //todo: if no products handle
@@ -222,7 +222,7 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
   }
 
 
-  public void purchaseNow(Callback cb, String oldProduct, String productId, int prorationMode, BillingResult responseCode) {
+  public void purchaseNow(Callback cb, String oldProduct, String productId, int prorationMode, BillingResult responseCode, String transactionReceipt) {
 
     purchaseCB = cb;
     boolean isProductExist = false;
@@ -244,7 +244,7 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
     if(isProductExist) {
 //      purchaseCB.invoke(null, "Product Exists");
       Log.e(TAG, "subscribeTo PRODUCT EXISTS " );
-      purchaseDigitalProduct(oldProduct,product, prorationMode);
+      purchaseDigitalProduct(oldProduct,product, prorationMode, transactionReceipt);
     } else {
       billingClient.endConnection();
       Log.e(TAG, "subscribeTo PRODUCT NOT EXISTS " );
@@ -261,18 +261,18 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
    * @param prorationMode - for upgrading and downgrading with price adjustment or not ; default = 1
    * note: pass prorationMode = 2 for upgrading and prorationMode = 4 for downgrading
    */
-  public void purchaseDigitalProduct(String oldProduct,SkuDetails productToBuy,  int prorationMode) {
-    Log.e(TAG, "purchaseDigitalProduct: oldProduct: "+oldProduct+ " productToBuy: "+ productToBuy.getSku()+ "prorationMode: "+prorationMode );
+  public void purchaseDigitalProduct(String oldProduct,SkuDetails productToBuy,  int prorationMode, String transactionReceipt) {
+    Log.e(TAG, "purchaseDigitalProduct: oldProduct: "+oldProduct+ " productToBuy: "+ productToBuy.getSku()+ "prorationMode: "+prorationMode+ "transactionReceipt:" +transactionReceipt );
     BillingFlowParams.Builder flowParams = BillingFlowParams.newBuilder();
     flowParams.setSkuDetails(productToBuy);
     if(oldProduct != null) { // && !oldProduct.equals(productToBuy.getSku())
       Log.e(TAG, "purchaseDigitalProduct: "+ "applying proration" );
-      flowParams.setOldSku(oldProduct, productToBuy.getSku());
+      flowParams.setOldSku(oldProduct, transactionReceipt);
       flowParams.setReplaceSkusProrationMode((prorationMode == 0) ? BillingFlowParams.ProrationMode.IMMEDIATE_WITH_TIME_PRORATION :prorationMode);
     }
 
     BillingResult responseCode2 = billingClient.launchBillingFlow(getReactApplicationContext().getCurrentActivity(), flowParams.build());
-    Log.e(TAG, "purchaseDigitalProduct:(0 = OK | 1 = USER CANCELED | 2-8 =ANY OTHER) "+responseCode2 );
+    Log.e(TAG, "purchaseDigitalProduct:(0 = OK | 1 = USER CANCELED | 2-8 =ANY OTHER) "+responseCode2.getResponseCode() );
 
   }
 
