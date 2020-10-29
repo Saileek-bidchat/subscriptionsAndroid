@@ -21,6 +21,10 @@ class InAppBilling {
         return RNSubscriptionsAndroid.subscribeToPlan(oldProductId,purchasetoken,productId,prorationMode, callback);
       }
 
+      static checkBilling(callback) {
+        return RNSubscriptionsAndroid.checkBilling(callback);
+      }
+
 }
 
 module.exports = InAppBilling;
