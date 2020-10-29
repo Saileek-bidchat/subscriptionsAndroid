@@ -102,11 +102,11 @@ public class RNSubscriptionsAndroidModule extends ReactContextBaseJavaModule
               + purchasesResult.getResponseCode() + "list: " + purchasesResult.getPurchasesList());
 
           billingClient.endConnection();
-          try {
-            Purchase purchase = new Purchase();
-          } catch (JSONException e) {
-            e.printStackTrace();
-          }
+          // try {
+          //   Purchase purchase = new Purchase();
+          // } catch (JSONException e) {
+          //   e.printStackTrace();
+          // }
           if (purchasesResult.getPurchasesList().size() == 0) {
             cb.invoke(null, null);
           } else {
